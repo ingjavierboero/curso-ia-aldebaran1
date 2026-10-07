@@ -15,8 +15,8 @@ Cada paso termina con sus tests en verde y un commit. No se avanza al siguiente 
 | 5 | Cliente ARCA (homologación) | ✅ Hecho |
 | 6 | Proceso de facturación | ✅ Hecho |
 | 7 | Email de la factura | ✅ Hecho |
-| 8 | Clasificador LLM | ⏳ Próximo |
-| 9 | Lectura de la casilla | Pendiente |
+| 8 | Clasificador LLM | ✅ Hecho |
+| 9 | Lectura de la casilla | ⏳ Próximo |
 | 10 | Scheduler | Pendiente |
 | 11 | Cierre mínimo para el usuario | Pendiente |
 
@@ -79,4 +79,12 @@ Login, usuarios y perfiles; ABMs con interfaz; dashboard y banners; recordatorio
   - Datos de la empresa emisora configurables por un Admin y en el PDF: RF-124, RF-125 y AC-165. **Fuera de esta etapa:** hoy el PDF muestra solo el CUIT del emisor.
   - Riesgo agregado: para producción el PDF debe cumplir los requisitos de ARCA (por ejemplo, el QR de RG 4892).
   - Variable opcional `EMAIL_REDIRECT_TO` (solo desarrollo) para mandar todos los emails a una casilla de prueba.
+- **Decisiones del paso 8, llevadas al PRD:**
+  - Los demás errores 4xx del LLM tampoco se reintentan, salvo 408 y 429 (RNF-02 y AC-166).
+  - El CUIT extraído es el del pagador y debe tener 11 dígitos; si no, cuenta como no extraído (RF-126 y AC-167).
+  - No se agrega al PRD: si llega un adjunto que no es PDF ni imagen, se clasifica con el texto del email y un aviso. Los clientes mandan PDF o imágenes que generan las apps de los bancos.
 - **Usuarios:** la tabla de usuarios y los campos de "quién confirmó o revisó" no están en esta etapa porque el login está fuera de alcance. Llegan con su propia migración.
+
+## Pendiente
+
+- **Evaluación del LLM real (AC-65 a AC-67):** conjunto de al menos 20 emails por clase ("si", "no", "dudoso") y un script que mida los porcentajes. Queda fuera de la suite de tests y se hará más adelante, con aprobación del costo de la API.
