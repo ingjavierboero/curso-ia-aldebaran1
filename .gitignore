@@ -3,6 +3,9 @@ dist/
 .env
 *.db
 *.db-journal
+*.db-wal
+*.db-shm
+data/
 *.sqlite
 # Certificado y clave de ARCA: nunca al repo
 *.crt

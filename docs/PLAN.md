@@ -1,0 +1,55 @@
+# Plan de implementación — feature central
+
+Circuito: **facturar → enviar → leer la casilla → validar el pago**. Spec: [PRD-002.md](../PRD-002.md).
+
+Cada paso termina con sus tests en verde y un commit. No se avanza al siguiente sin aprobación.
+
+## Estado
+
+| # | Paso | Estado |
+|---|---|---|
+| 1 | Base del proyecto | ✅ Hecho |
+| 2 | Base de datos | ✅ Hecho |
+| 3 | Motor de reglas de pago | ⏳ Próximo |
+| 4 | Cotización | Pendiente |
+| 5 | Cliente ARCA (homologación) | Pendiente |
+| 6 | Proceso de facturación | Pendiente |
+| 7 | Email de la factura | Pendiente |
+| 8 | Clasificador LLM | Pendiente |
+| 9 | Lectura de la casilla | Pendiente |
+| 10 | Scheduler | Pendiente |
+| 11 | Cierre mínimo para el usuario | Pendiente |
+
+## Pasos
+
+1. **Base del proyecto.** Monorepo con workspaces (`server/` por ahora), TypeScript, Vitest, `.env.example` y un módulo que lea la configuración desde las variables de entorno. Sin lógica de negocio.
+2. **Base de datos.** Schema de Drizzle y la primera migración con estas tablas: clientes, sistemas, asignaciones, facturas con sus ítems (guardando el nombre y el precio que tenían al facturar, por AC-35/36), cotizaciones, emails recibidos o historial, avisos, errores de proceso y configuración con valores por defecto. Montos en centavos (enteros). Un seed con datos de prueba, porque todavía no hay ABMs.
+3. **Motor de reglas de pago (lógica pura).** Una función que recibe la clasificación, el CUIT, el monto y las facturas adeudadas, y devuelve el nuevo estado y el motivo (RF-62 a RF-74). Incluye la búsqueda de coincidencias de monto y de la combinación más antigua. Va primero porque es lo más delicado y se puede testear sin servicios externos (AC-73 a AC-89).
+4. **Cotización.** Scraper de dolarhoy.com con un timeout de 10 s. Si falla, usa la última cotización registrada; si no hay ninguna, no se facturan los clientes con sistemas en dólares (RF-41 a RF-43).
+5. **Cliente de ARCA para homologación.** WSAA (genera el ticket de acceso y lo guarda en caché) y WSFEv1 (consulta el último comprobante y pide el CAE), con un timeout de 30 s. La URL de homologación queda fija. Los tests usan respuestas SOAP mockeadas.
+6. **Proceso de facturación.** Elige los clientes Activos con al menos un sistema Activo asignado, arma el detalle, genera una sola factura por cliente y período (si se vuelve a correr, no la duplica) y la deja en Pendiente de pago. Si falla, reintenta según la configuración y, si sigue fallando, registra un error de proceso (RF-89 y RF-92).
+7. **Email de la factura.** nodemailer con Gmail. Cada envío queda en el historial del cliente y tiene los mismos reintentos y errores de proceso que el paso 6. No se envía nada a clientes Inactivos.
+8. **Clasificador con LLM.** Haiku 4.5 con salida estructurada (si/no/dudoso, CUIT y monto). Reintentos de 2, 4 y 8 s, un timeout de 10 s y las respuestas 400/401/403 sin reintento (RNF-02). El SDK se mockea en los tests.
+9. **Lectura de la casilla.** Con imapflow. Busca qué cliente envió el email; si no coincide ninguno, registra un aviso. Guarda el email en el historial, filtra los que tienen adjunto, llama al clasificador y al motor del paso 3, y actualiza las facturas. Si la casilla falla, registra un único error y lo pasa a Resuelto cuando vuelve a conectar, procesando lo atrasado (RF-50 a RF-61).
+10. **Scheduler.** node-cron con TZ `America/Argentina/Buenos_Aires`: facturación el día 15 a la hora configurada y revisión de la casilla cada N minutos.
+11. **Cierre mínimo para el usuario.** Dos o tres endpoints y una pantalla simple para ver las facturas en Pago recibido o Revisión manual y pasarlas a Pagada o devolverlas a Pendiente de pago (RF-77 a RF-80).
+
+## Fuera de esta etapa
+
+Login, usuarios y perfiles; ABMs con interfaz; dashboard y banners; recordatorios de fin de mes; reintento manual de errores; interfaz de configuración.
+
+## Decisiones tomadas
+
+- **Tipo de comprobante:** Factura C (código 11). Agregado al PRD como RF-102.
+- **Punto de venta:** configurable desde la configuración, entre 1 y 99999. Agregado al PRD como RF-103, RF-104, AC-141 y AC-142.
+- **Paso 11:** incluido en esta etapa.
+- **LLM:** se usa la API key de Anthropic (`ANTHROPIC_API_KEY`). La alternativa de Claude por Vertex AI quedó descartada por ahora.
+- **Formato de la factura en el email:** siempre PDF adjunto. Agregado al PRD como RF-106 y AC-145 (y en RF-46).
+- **Decisiones de diseño del paso 2, llevadas al PRD:**
+  - Una sola factura por cliente y período, aunque el proceso corra dos veces: RF-105 y AC-144.
+  - CUIT y email de facturación únicos por cliente: RF-107 y AC-143.
+  - Remitente comparado sin distinguir mayúsculas: RF-108 y AC-146.
+  - Cada email se procesa una sola vez, por Message-ID: RF-109 y AC-147.
+  - Solo las facturas en Revisión manual tienen motivo: RF-110 y AC-148.
+  - Montos con precisión de centavos y coincidencia exacta: RNF-13 y AC-149.
+- **Usuarios:** la tabla de usuarios y los campos de "quién confirmó o revisó" no están en esta etapa porque el login está fuera de alcance. Llegan con su propia migración.
