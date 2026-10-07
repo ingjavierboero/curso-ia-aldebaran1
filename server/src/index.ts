@@ -11,7 +11,8 @@ loadEnvFile();
 try {
   const config = loadConfig();
   const db = openDb(config.databasePath);
-  const server = createApp().listen(config.port, () => {
+  // Solo localhost: el login (RF-01) está fuera de esta etapa, así que la API no se expone a la red.
+  const server = createApp({ db, issuerCuit: config.arca.cuit }).listen(config.port, '127.0.0.1', () => {
     console.log(`Aldebaran server escuchando en http://localhost:${config.port}`);
   });
 

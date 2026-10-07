@@ -18,7 +18,7 @@ Cada paso termina con sus tests en verde y un commit. No se avanza al siguiente 
 | 8 | Clasificador LLM | ✅ Hecho |
 | 9 | Lectura de la casilla | ✅ Hecho |
 | 10 | Scheduler | ✅ Hecho |
-| 11 | Cierre mínimo para el usuario | ⏳ Próximo |
+| 11 | Cierre mínimo para el usuario | ✅ Hecho |
 
 ## Pasos
 
