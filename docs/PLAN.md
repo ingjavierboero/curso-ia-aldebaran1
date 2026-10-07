@@ -11,8 +11,8 @@ Cada paso termina con sus tests en verde y un commit. No se avanza al siguiente 
 | 1 | Base del proyecto | ✅ Hecho |
 | 2 | Base de datos | ✅ Hecho |
 | 3 | Motor de reglas de pago | ✅ Hecho |
-| 4 | Cotización | ⏳ Próximo |
-| 5 | Cliente ARCA (homologación) | Pendiente |
+| 4 | Cotización | ✅ Hecho |
+| 5 | Cliente ARCA (homologación) | ⏳ Próximo |
 | 6 | Proceso de facturación | Pendiente |
 | 7 | Email de la factura | Pendiente |
 | 8 | Clasificador LLM | Pendiente |
@@ -57,4 +57,8 @@ Login, usuarios y perfiles; ABMs con interfaz; dashboard y banners; recordatorio
   - RF-64 reemplaza el motivo de las facturas que ya estaban en Revisión manual (RF-64 y AC-75).
   - El CUIT se compara solo por sus dígitos: RF-111 y AC-150.
   - Un monto menor o igual a cero, o con fracción de centavo, no coincide: RNF-13 y AC-152.
+- **Decisiones del paso 4, llevadas al PRD:**
+  - La conversión de dólares a pesos se redondea al centavo más cercano: RF-112 y AC-153 (y la aclaración en RNF-13).
+  - Cada lectura de dolarhoy.com queda registrada, y la de respaldo es la de fecha de lectura más reciente: RF-113, RF-42 y AC-154.
+  - Si dolarhoy.com cambia su HTML y no se encuentra el blue venta, se trata como "no se puede leer la cotización" (RF-42): se usa la de respaldo y aparece el banner.
 - **Usuarios:** la tabla de usuarios y los campos de "quién confirmó o revisó" no están en esta etapa porque el login está fuera de alcance. Llegan con su propia migración.
