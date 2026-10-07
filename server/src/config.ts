@@ -1,5 +1,25 @@
+import { existsSync } from 'node:fs';
+import { isAbsolute, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 /** Zona horaria que rige todas las fechas y horarios del sistema (RNF-12). */
 export const TIMEZONE = 'America/Argentina/Buenos_Aires';
+
+/** Raíz del monorepo: las rutas relativas del .env se resuelven desde acá, se corra desde donde se corra. */
+export const ROOT_DIR = fileURLToPath(new URL('../../', import.meta.url));
+
+export const DEFAULT_DATABASE_PATH = './data/aldebaran.db';
+
+/** Resuelve una ruta del .env: si es relativa, desde la raíz del monorepo. */
+export function resolveFromRoot(path: string, rootDir = ROOT_DIR): string {
+  return isAbsolute(path) ? path : resolve(rootDir, path);
+}
+
+/** Carga el .env de la raíz del monorepo, si existe. No pisa variables ya definidas. */
+export function loadEnvFile(rootDir = ROOT_DIR): void {
+  const path = resolve(rootDir, '.env');
+  if (existsSync(path)) process.loadEnvFile(path);
+}
 
 export interface Config {
   port: number;
@@ -36,7 +56,7 @@ const REQUIRED = [
  * Arma la configuración a partir de las variables de entorno (RNF-08, RNF-11).
  * Las credenciales nunca tienen valor por defecto: si falta alguna, falla.
  */
-export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
+export function loadConfig(env: NodeJS.ProcessEnv = process.env, rootDir = ROOT_DIR): Config {
   const problems: string[] = [];
   const value = (name: string) => env[name]?.trim() ?? '';
 
@@ -59,7 +79,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 
   return {
     port,
-    databasePath: value('DATABASE_PATH') || './data/aldebaran.db',
+    databasePath: resolveFromRoot(value('DATABASE_PATH') || DEFAULT_DATABASE_PATH, rootDir),
     anthropicApiKey: value('ANTHROPIC_API_KEY'),
     gmail: {
       user: value('GMAIL_USER'),
@@ -67,8 +87,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     },
     arca: {
       cuit,
-      certPath: value('ARCA_CERT_PATH'),
-      keyPath: value('ARCA_KEY_PATH'),
+      certPath: resolveFromRoot(value('ARCA_CERT_PATH'), rootDir),
+      keyPath: resolveFromRoot(value('ARCA_KEY_PATH'), rootDir),
     },
   };
 }

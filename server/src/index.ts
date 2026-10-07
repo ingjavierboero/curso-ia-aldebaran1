@@ -1,14 +1,10 @@
-import { existsSync } from 'node:fs';
 import { createApp } from './app.js';
-import { ConfigError, TIMEZONE, loadConfig } from './config.js';
+import { ConfigError, TIMEZONE, loadConfig, loadEnvFile } from './config.js';
 import { openDb } from './db/index.js';
 
 process.env.TZ = TIMEZONE;
 
-// El .env puede estar en la raíz del monorepo o en server/.
-for (const path of ['../.env', '.env']) {
-  if (existsSync(path)) process.loadEnvFile(path);
-}
+loadEnvFile();
 
 try {
   const config = loadConfig();

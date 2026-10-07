@@ -366,3 +366,15 @@ export const processErrors = sqliteTable(
     check('process_errors_attempts', sql`${t.attempts} >= 1`),
   ],
 );
+
+/**
+ * Ticket de acceso de WSAA por servicio de ARCA. Se reutiliza hasta que vence (~12 h):
+ * WSAA rechaza pedir otro mientras haya uno vigente, por eso sobrevive a un reinicio.
+ */
+export const arcaAccessTickets = sqliteTable('arca_access_tickets', {
+  service: text('service').primaryKey(),
+  token: text('token').notNull(),
+  sign: text('sign').notNull(),
+  expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+  createdAt: timestamps.createdAt,
+});

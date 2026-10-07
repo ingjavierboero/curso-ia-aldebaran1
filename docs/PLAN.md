@@ -12,8 +12,8 @@ Cada paso termina con sus tests en verde y un commit. No se avanza al siguiente 
 | 2 | Base de datos | ✅ Hecho |
 | 3 | Motor de reglas de pago | ✅ Hecho |
 | 4 | Cotización | ✅ Hecho |
-| 5 | Cliente ARCA (homologación) | ⏳ Próximo |
-| 6 | Proceso de facturación | Pendiente |
+| 5 | Cliente ARCA (homologación) | ✅ Hecho |
+| 6 | Proceso de facturación | ⏳ Próximo |
 | 7 | Email de la factura | Pendiente |
 | 8 | Clasificador LLM | Pendiente |
 | 9 | Lectura de la casilla | Pendiente |
@@ -61,4 +61,9 @@ Login, usuarios y perfiles; ABMs con interfaz; dashboard y banners; recordatorio
   - La conversión de dólares a pesos se redondea al centavo más cercano: RF-112 y AC-153 (y la aclaración en RNF-13).
   - Cada lectura de dolarhoy.com queda registrada, y la de respaldo es la de fecha de lectura más reciente: RF-113, RF-42 y AC-154.
   - Si dolarhoy.com cambia su HTML y no se encuentra el blue venta, se trata como "no se puede leer la cotización" (RF-42): se usa la de respaldo y aparece el banner.
+- **Decisiones del paso 5, llevadas al PRD:**
+  - Cada cliente tiene su condición frente al IVA, con los valores que ARCA admite para Factura C (consultados en homologación): RF-114, RF-115, AC-155 y AC-156. Se agrega al cliente en el paso 6, con una migración nueva.
+  - Fecha de emisión: el día en que se genera la factura. Período de servicio: del 1 al último día del mes facturado: RF-116 y AC-157.
+  - Vencimiento del pago: el último día del mes facturado, o la fecha de emisión si es posterior (ARCA no admite un vencimiento anterior a la emisión): RF-117 y AC-158.
+  - Las rutas relativas del `.env` (certificados y base) se toman desde la raíz del repo.
 - **Usuarios:** la tabla de usuarios y los campos de "quién confirmó o revisó" no están en esta etapa porque el login está fuera de alcance. Llegan con su propia migración.
