@@ -22,6 +22,9 @@ npm run test       # corre toda la suite (Vitest)
 ```
 Variables de entorno (`.env`, nunca commiteado; plantilla en `.env.example`):
 `ANTHROPIC_API_KEY`, `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `ARCA_CUIT`, `ARCA_CERT_PATH`, `ARCA_KEY_PATH`.
+Las rutas relativas se toman desde la raíz del repo. Opcionales: `PORT`, `DATABASE_PATH`,
+`SCHEDULER_ENABLED` (procesos automáticos de facturación y casilla; solo corren con `true`, así que en
+desarrollo se dejan apagados) y `EMAIL_REDIRECT_TO` (solo desarrollo: manda todos los emails a esa casilla).
 
 ## Qué NO hacer
 - No apuntar nunca a los endpoints productivos de ARCA: solo homologación.

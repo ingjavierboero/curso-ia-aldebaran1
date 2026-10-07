@@ -441,3 +441,25 @@ export const mailboxChecks = sqliteTable(
     check('mailbox_checks_status', sql`${t.status} IN ('running', 'ok', 'error')`),
   ],
 );
+
+/**
+ * Ejecuciones de procesos programados por período (por ahora, la facturación mensual): evita
+ * correrlos dos veces y permite recuperar una ejecución perdida si el servidor estuvo caído.
+ */
+export const jobRuns = sqliteTable(
+  'job_runs',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    job: text('job', { enum: ['billing'] }).notNull(),
+    period: text('period').notNull(),
+    startedAt: integer('started_at', { mode: 'timestamp_ms' }).notNull(),
+    finishedAt: integer('finished_at', { mode: 'timestamp_ms' }),
+    status: text('status', { enum: ['running', 'ok', 'error'] }).notNull().default('running'),
+    summary: text('summary', { mode: 'json' }).$type<Record<string, unknown>>(),
+  },
+  (t) => [
+    uniqueIndex('job_runs_job_period').on(t.job, t.period),
+    check('job_runs_job', sql`${t.job} IN ('billing')`),
+    check('job_runs_status', sql`${t.status} IN ('running', 'ok', 'error')`),
+  ],
+);

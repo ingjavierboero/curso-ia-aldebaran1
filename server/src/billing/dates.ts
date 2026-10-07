@@ -12,6 +12,18 @@ export function argentinaDate(at: Date): string {
   return dateFormat.format(at);
 }
 
+const timeFormat = new Intl.DateTimeFormat('en-GB', {
+  timeZone: TIMEZONE,
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+});
+
+/** Hora en Argentina (RNF-12), formato HH:MM. */
+export function argentinaTime(at: Date): string {
+  return timeFormat.format(at);
+}
+
 /** Período (mes facturado) de una fecha en Argentina, formato YYYY-MM. */
 export function argentinaPeriod(at: Date): string {
   return argentinaDate(at).slice(0, 7);

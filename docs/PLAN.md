@@ -17,8 +17,8 @@ Cada paso termina con sus tests en verde y un commit. No se avanza al siguiente 
 | 7 | Email de la factura | ✅ Hecho |
 | 8 | Clasificador LLM | ✅ Hecho |
 | 9 | Lectura de la casilla | ✅ Hecho |
-| 10 | Scheduler | ⏳ Próximo |
-| 11 | Cierre mínimo para el usuario | Pendiente |
+| 10 | Scheduler | ✅ Hecho |
+| 11 | Cierre mínimo para el usuario | ⏳ Próximo |
 
 ## Pasos
 
@@ -89,6 +89,11 @@ Login, usuarios y perfiles; ABMs con interfaz; dashboard y banners; recordatorio
   - Los emails de un cliente Inactivo se procesan igual (RF-129 y AC-170).
   - La primera revisión toma los emails desde el día de la primera factura; después, solo los nuevos (RF-130 y AC-171).
   - La casilla se lee en modo solo lectura y la posición (último UID) se guarda en la base (migración 0003).
+- **Decisiones del paso 10, llevadas al PRD:**
+  - Si el sistema estuvo detenido el día 15, factura al volver, dentro del mismo mes (RF-131 y AC-172).
+  - Una facturación interrumpida se retoma sin duplicar (RF-132 y AC-173).
+  - La casilla se revisa cada N minutos desde el inicio de la revisión anterior, sin superponerse (RF-133 y AC-174).
+  - Operativo, en AGENTS.md y no en el PRD: los procesos automáticos solo corren con `SCHEDULER_ENABLED=true`; en desarrollo quedan apagados.
 - **Usuarios:** la tabla de usuarios y los campos de "quién confirmó o revisó" no están en esta etapa porque el login está fuera de alcance. Llegan con su propia migración.
 
 ## Pendiente

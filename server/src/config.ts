@@ -31,6 +31,8 @@ export interface Config {
   };
   /** Solo desarrollo: si está definida, todos los emails salientes van a esta casilla. */
   emailRedirectTo: string | null;
+  /** Procesos automáticos (facturación y casilla). Apagados salvo SCHEDULER_ENABLED=true. */
+  schedulerEnabled: boolean;
   arca: {
     cuit: string;
     certPath: string;
@@ -82,6 +84,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, rootDir = ROOT_
     problems.push(`EMAIL_REDIRECT_TO no es un email válido: "${redirect}"`);
   }
 
+  const scheduler = value('SCHEDULER_ENABLED').toLowerCase();
+  if (scheduler && scheduler !== 'true' && scheduler !== 'false') {
+    problems.push(`SCHEDULER_ENABLED debe ser true o false, no "${value('SCHEDULER_ENABLED')}"`);
+  }
+
   if (problems.length > 0) throw new ConfigError(problems);
 
   return {
@@ -93,6 +100,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, rootDir = ROOT_
       appPassword: value('GMAIL_APP_PASSWORD'),
     },
     emailRedirectTo: redirect || null,
+    schedulerEnabled: scheduler === 'true',
     arca: {
       cuit,
       certPath: resolveFromRoot(value('ARCA_CERT_PATH'), rootDir),
