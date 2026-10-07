@@ -26,6 +26,7 @@ Variables de entorno (`.env`, nunca commiteado; plantilla en `.env.example`):
 ## Qué NO hacer
 - No apuntar nunca a los endpoints productivos de ARCA: solo homologación.
 - No poner credenciales en el código ni en el repo (API key, Gmail, certificado/clave de ARCA): todo sale de variables de entorno.
+- No versionar los certificados ni las claves de ARCA (`certs/`, `*.crt`, `*.key`, `*.pem`): viven solo en la máquina local y se referencian con `ARCA_CERT_PATH` y `ARCA_KEY_PATH`.
 - El agente nunca marca una factura como "Pagada": cuando valida un comprobante (de una o de varias facturas) la pasa a "Pago recibido" para que un usuario la analice, y si es dudoso, parcial o no lo puede validar, a "Revisión manual". El usuario decide si pasa a "Pagada" o vuelve a "Pendiente de pago".
 - No consultar ni integrar sistemas bancarios para validar pagos: la única fuente es el email del cliente.
 - Los tests no envían emails reales ni llaman a ARCA, Gmail o Claude: se mockean.
