@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+*.db
+*.db-journal
+*.sqlite
+# Certificado y clave de ARCA: nunca al repo
+*.crt
+*.key
+*.pem
+certs/
