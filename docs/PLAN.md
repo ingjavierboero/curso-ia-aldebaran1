@@ -13,8 +13,8 @@ Cada paso termina con sus tests en verde y un commit. No se avanza al siguiente 
 | 3 | Motor de reglas de pago | ✅ Hecho |
 | 4 | Cotización | ✅ Hecho |
 | 5 | Cliente ARCA (homologación) | ✅ Hecho |
-| 6 | Proceso de facturación | ⏳ Próximo |
-| 7 | Email de la factura | Pendiente |
+| 6 | Proceso de facturación | ✅ Hecho |
+| 7 | Email de la factura | ⏳ Próximo |
 | 8 | Clasificador LLM | Pendiente |
 | 9 | Lectura de la casilla | Pendiente |
 | 10 | Scheduler | Pendiente |
@@ -66,4 +66,10 @@ Login, usuarios y perfiles; ABMs con interfaz; dashboard y banners; recordatorio
   - Fecha de emisión: el día en que se genera la factura. Período de servicio: del 1 al último día del mes facturado: RF-116 y AC-157.
   - Vencimiento del pago: el último día del mes facturado, o la fecha de emisión si es posterior (ARCA no admite un vencimiento anterior a la emisión): RF-117 y AC-158.
   - Las rutas relativas del `.env` (certificados y base) se toman desde la raíz del repo.
+- **Decisiones del paso 6, llevadas al PRD:**
+  - No se emiten comprobantes duplicados: si ARCA autorizó una factura y la respuesta se perdió, se registra con el CAE ya otorgado (RF-118 y AC-159).
+  - El CUIT del cliente tiene que tener el dígito verificador válido (RF-119 y AC-160). Se aplica en el ABM de clientes; el seed ya usa CUIT válidos.
+  - Un cliente sin condición frente al IVA no se factura y genera un error de proceso (RF-120 y AC-161).
+  - La migración 0002 se escribió a mano: la de drizzle-kit recreaba `clients` y, dentro de la transacción, borraba en cascada asignaciones e historial.
+  - Un cliente cuya generación falla se reintenta a los N minutos sin demorar a los demás.
 - **Usuarios:** la tabla de usuarios y los campos de "quién confirmó o revisó" no están en esta etapa porque el login está fuera de alcance. Llegan con su propia migración.

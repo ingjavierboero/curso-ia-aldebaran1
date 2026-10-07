@@ -53,6 +53,27 @@ export const HISTORY_EVENTS = [
 /** Código de comprobante de ARCA para Factura C (RF-102). */
 export const INVOICE_TYPE_C = 11;
 
+/**
+ * Condiciones frente al IVA que ARCA admite para el receptor de una Factura C (RF-114),
+ * según FEParamGetCondicionIvaReceptor de homologación.
+ */
+export const VAT_CONDITIONS = {
+  1: 'IVA Responsable Inscripto',
+  4: 'IVA Sujeto Exento',
+  5: 'Consumidor Final',
+  6: 'Responsable Monotributo',
+  7: 'Sujeto No Categorizado',
+  8: 'Proveedor del Exterior',
+  9: 'Cliente del Exterior',
+  10: 'IVA Liberado – Ley N° 19.640',
+  13: 'Monotributista Social',
+  15: 'IVA No Alcanzado',
+  16: 'Monotributo Trabajador Independiente Promovido',
+} as const;
+
+export type VatConditionId = keyof typeof VAT_CONDITIONS;
+const VAT_CONDITION_IDS = sql.raw(Object.keys(VAT_CONDITIONS).join(', '));
+
 /** Configuración del sistema: una sola fila (id = 1). */
 export const settings = sqliteTable(
   'settings',
@@ -93,6 +114,9 @@ export const clients = sqliteTable(
     // Casilla registrada: se guarda en minúsculas para comparar remitentes (RF-55).
     email: text('email').notNull(),
     status: text('status', { enum: ACTIVE_STATUSES }).notNull().default('active'),
+    // Condición frente al IVA (RF-114). Admite null solo por los clientes cargados antes de
+    // que existiera el campo: el alta la exige, y la facturación falla si falta.
+    vatConditionId: integer('vat_condition_id').$type<VatConditionId>(),
     ...timestamps,
   },
   (t) => [
@@ -101,6 +125,7 @@ export const clients = sqliteTable(
     check('clients_cuit_format', sql`length(${t.cuit}) = 11 AND ${t.cuit} NOT GLOB '*[^0-9]*'`),
     check('clients_email_lowercase', sql`${t.email} = lower(${t.email})`),
     check('clients_status', sql`${t.status} IN ('active', 'inactive')`),
+    check('clients_vat_condition', sql`${t.vatConditionId} IS NULL OR ${t.vatConditionId} IN (${VAT_CONDITION_IDS})`),
   ],
 );
 
@@ -176,6 +201,12 @@ export const invoices = sqliteTable(
     issuedAt: integer('issued_at', { mode: 'timestamp_ms' }).notNull(),
     clientBusinessName: text('client_business_name').notNull(),
     clientCuit: text('client_cuit').notNull(),
+    clientVatConditionId: integer('client_vat_condition_id').$type<VatConditionId>().notNull(),
+    // Fechas fiscales en formato YYYY-MM-DD (RF-116, RF-117).
+    issueDate: text('issue_date').notNull(),
+    serviceFrom: text('service_from').notNull(),
+    serviceTo: text('service_to').notNull(),
+    paymentDueDate: text('payment_due_date').notNull(),
     totalCents: integer('total_cents').notNull(),
     // Cotización usada si algún ítem estaba en dólares (AC-45, AC-46).
     exchangeRateCents: integer('exchange_rate_cents'),

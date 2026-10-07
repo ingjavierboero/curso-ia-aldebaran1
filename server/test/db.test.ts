@@ -39,6 +39,11 @@ function insertInvoice(clientId: number, overrides: Partial<typeof invoices.$inf
       issuedAt: new Date(),
       clientBusinessName: 'Cliente',
       clientCuit: '20123456789',
+      clientVatConditionId: 1,
+      issueDate: '2026-09-15',
+      serviceFrom: '2026-09-01',
+      serviceTo: '2026-09-30',
+      paymentDueDate: '2026-09-30',
       totalCents: 15_000_00,
       ...overrides,
     })
@@ -173,9 +178,22 @@ describe('emails recibidos', () => {
 });
 
 describe('seed', () => {
+  it('actualiza el CUIT y la condición de IVA de los clientes de ejemplo en una base existente', () => {
+    seed(db);
+    db.update(clients).set({ cuit: '30711111118', vatConditionId: null }).where(eq(clients.email, 'pagos@losandes.test')).run();
+    const otro = insertClient({ cuit: '20111111112', email: 'otro@cliente.com' });
+
+    expect(seed(db)).toBe('updated');
+    expect(db.select().from(clients).where(eq(clients.email, 'pagos@losandes.test')).get()).toMatchObject({
+      cuit: '30711111111',
+      vatConditionId: 1,
+    });
+    expect(db.select().from(clients).where(eq(clients.id, otro.id)).get()).toEqual(otro);
+  });
+
   it('carga clientes, sistemas y asignaciones de ejemplo una sola vez', () => {
-    expect(seed(db)).toBe(true);
-    expect(seed(db)).toBe(false);
+    expect(seed(db)).toBe('created');
+    expect(seed(db)).toBe('unchanged');
 
     expect(db.select().from(clients).all()).toHaveLength(4);
     expect(db.select().from(systems).all()).toHaveLength(3);
