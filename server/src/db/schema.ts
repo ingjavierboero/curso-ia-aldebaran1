@@ -409,3 +409,35 @@ export const arcaAccessTickets = sqliteTable('arca_access_tickets', {
   expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
   createdAt: timestamps.createdAt,
 });
+
+/**
+ * Hasta dónde se leyó la casilla (una sola fila). Los UID de IMAP crecen dentro de un mismo
+ * UIDVALIDITY; si el servidor lo cambia, se vuelve a leer y Message-ID evita duplicados (RF-109).
+ */
+export const mailboxState = sqliteTable(
+  'mailbox_state',
+  {
+    id: integer('id').primaryKey(),
+    uidValidity: text('uid_validity').notNull(),
+    lastUid: integer('last_uid').notNull(),
+    updatedAt: timestamps.updatedAt,
+  },
+  (t) => [check('mailbox_state_singleton', sql`${t.id} = 1`)],
+);
+
+/** Registro de cada revisión de la casilla con los emails detectados (AC-56). */
+export const mailboxChecks = sqliteTable(
+  'mailbox_checks',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    startedAt: integer('started_at', { mode: 'timestamp_ms' }).notNull(),
+    finishedAt: integer('finished_at', { mode: 'timestamp_ms' }),
+    status: text('status', { enum: ['running', 'ok', 'error'] }).notNull().default('running'),
+    emailsDetected: integer('emails_detected').notNull().default(0),
+    error: text('error'),
+  },
+  (t) => [
+    index('mailbox_checks_started').on(t.startedAt),
+    check('mailbox_checks_status', sql`${t.status} IN ('running', 'ok', 'error')`),
+  ],
+);

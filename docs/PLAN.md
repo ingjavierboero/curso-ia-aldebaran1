@@ -16,8 +16,8 @@ Cada paso termina con sus tests en verde y un commit. No se avanza al siguiente 
 | 6 | Proceso de facturación | ✅ Hecho |
 | 7 | Email de la factura | ✅ Hecho |
 | 8 | Clasificador LLM | ✅ Hecho |
-| 9 | Lectura de la casilla | ⏳ Próximo |
-| 10 | Scheduler | Pendiente |
+| 9 | Lectura de la casilla | ✅ Hecho |
+| 10 | Scheduler | ⏳ Próximo |
 | 11 | Cierre mínimo para el usuario | Pendiente |
 
 ## Pasos
@@ -83,6 +83,12 @@ Login, usuarios y perfiles; ABMs con interfaz; dashboard y banners; recordatorio
   - Los demás errores 4xx del LLM tampoco se reintentan, salvo 408 y 429 (RNF-02 y AC-166).
   - El CUIT extraído es el del pagador y debe tener 11 dígitos; si no, cuenta como no extraído (RF-126 y AC-167).
   - No se agrega al PRD: si llega un adjunto que no es PDF ni imagen, se clasifica con el texto del email y un aviso. Los clientes mandan PDF o imágenes que generan las apps de los bancos.
+- **Decisiones del paso 9, llevadas al PRD:**
+  - Los emails de la propia casilla del sistema no se procesan (RF-127 y AC-168).
+  - Las imágenes embebidas en el cuerpo no cuentan como adjuntos (RF-128 y AC-169).
+  - Los emails de un cliente Inactivo se procesan igual (RF-129 y AC-170).
+  - La primera revisión toma los emails desde el día de la primera factura; después, solo los nuevos (RF-130 y AC-171).
+  - La casilla se lee en modo solo lectura y la posición (último UID) se guarda en la base (migración 0003).
 - **Usuarios:** la tabla de usuarios y los campos de "quién confirmó o revisó" no están en esta etapa porque el login está fuera de alcance. Llegan con su propia migración.
 
 ## Pendiente

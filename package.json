@@ -18,6 +18,7 @@
     "arca:check": "npm run arca:check -w server",
     "billing:run": "npm run billing:run -w server",
     "email:check": "npm run email:check -w server",
-    "llm:check": "npm run llm:check -w server --"
+    "llm:check": "npm run llm:check -w server --",
+    "mailbox:check": "npm run mailbox:check -w server"
   }
 }

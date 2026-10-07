@@ -12,7 +12,8 @@
     "arca:check": "tsx src/arca/check-cli.ts",
     "billing:run": "tsx src/billing/run-cli.ts",
     "email:check": "tsx src/email/check-cli.ts",
-    "llm:check": "tsx src/payments/check-cli.ts"
+    "llm:check": "tsx src/payments/check-cli.ts",
+    "mailbox:check": "tsx src/mailbox/check-cli.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.132.0",
@@ -21,6 +22,8 @@
     "drizzle-orm": "^0.45.3",
     "express": "^5.2.1",
     "fast-xml-parser": "^5.11.2",
+    "imapflow": "^2.2.10",
+    "mailparser": "^3.9.36",
     "nodemailer": "^10.0.16",
     "pdfkit": "^0.20.2",
     "pkijs": "^3.4.1"
@@ -28,6 +31,7 @@
   "devDependencies": {
     "@types/better-sqlite3": "^9.6.0",
     "@types/express": "^5.0.6",
+    "@types/mailparser": "^3.9.0",
     "@types/node": "^24.19.1",
     "@types/nodemailer": "^8.0.2",
     "@types/pdfkit": "^0.17.6",
