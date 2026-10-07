@@ -1,8 +1,10 @@
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { recordGenerationError, runBilling } from '../../src/billing/run.js';
+import { runBilling } from '../../src/billing/run.js';
+import { recordProcessError } from '../../src/process-errors.js';
 import { type Db, openDb } from '../../src/db/index.js';
 import {
+  clientHistory,
   clientSystems,
   clients,
   invoiceItems,
@@ -13,7 +15,7 @@ import {
 } from '../../src/db/schema.js';
 import { DOLARHOY_SOURCE } from '../../src/exchange-rate/dolarhoy.js';
 import type { BillingExchangeRate } from '../../src/exchange-rate/service.js';
-import { fakeArcaClient, fakeClock, issueForeignInvoice } from './fakes.js';
+import { fakeArcaClient, fakeClock, fakeMailer, issueForeignInvoice } from './fakes.js';
 
 let db: Db;
 const OCT_15 = '2026-10-15T14:00:00Z'; // 11:00 en Argentina
@@ -54,8 +56,10 @@ const noRate: () => Promise<BillingExchangeRate> = async () => ({ kind: 'unavail
 function setup(start = OCT_15) {
   const time = fakeClock(start);
   const arca = fakeArcaClient(time.clock);
-  const run = (getExchangeRate = liveRate()) => runBilling({ db, arca: arca.client, getExchangeRate, clock: time.clock });
-  return { ...time, arca, run };
+  const email = fakeMailer(time.clock);
+  const run = (getExchangeRate = liveRate()) =>
+    runBilling({ db, arca: arca.client, mailer: email.mailer, issuerCuit: '20311274350', getExchangeRate, clock: time.clock });
+  return { ...time, arca, email, run };
 }
 
 const itemsOf = (invoiceId: number) =>
@@ -403,21 +407,118 @@ describe('runBilling', () => {
         [second.cuit, '2026-10-15'],
         [first.cuit, '2026-10-15'],
       ]);
+      // En orden de generación: el segundo cliente se factura mientras el primero espera su reintento.
       expect(summary.generated.map((i) => [i.clientId, i.number])).toEqual([
-        [first.id, 2],
         [second.id, 1],
+        [first.id, 2],
       ]);
     });
 
     it('no duplica el error de proceso si el cliente vuelve a fallar en el mismo período', () => {
       const client = oneClient();
 
-      recordGenerationError(db, client.id, '2026-10', 4, 'primer error');
-      recordGenerationError(db, client.id, '2026-10', 4, 'segundo error');
+      const subject = { operation: 'invoice_generation', clientId: client.id, period: '2026-10' } as const;
+      recordProcessError(db, subject, 4, 'primer error');
+      recordProcessError(db, subject, 4, 'segundo error');
 
       expect(db.select().from(processErrors).all()).toEqual([
         expect.objectContaining({ attempts: 4, lastError: 'segundo error' }),
       ]);
+    });
+  });
+
+  describe('email de la factura', () => {
+    it('AC-50: envía cada factura generada a la casilla del cliente y lo registra en el historial', async () => {
+      const client = addClient({ email: 'pagos@cliente.com' });
+      assign(client.id, addSystem('CRM', 100_00).id);
+      const { run, email } = setup();
+
+      const summary = await run();
+
+      expect(email.sent.map((e) => [e.to, e.attachments?.[0]?.filename])).toEqual([
+        ['pagos@cliente.com', 'Factura-C-00001-00000001.pdf'],
+      ]);
+      expect(summary.emailed).toEqual([{ invoiceId: summary.generated[0]!.id, to: 'pagos@cliente.com' }]);
+      expect(db.select().from(clientHistory).all()).toEqual([
+        expect.objectContaining({ clientId: client.id, event: 'invoice_email_sent', invoiceId: summary.generated[0]!.id }),
+      ]);
+    });
+
+    it('AC-162: envía el email apenas se genera la factura, sin esperar los reintentos de otros clientes', async () => {
+      const first = addClient();
+      assign(first.id, addSystem('CRM', 100_00).id);
+      const second = addClient();
+      assign(second.id, addSystem('ERP', 100_00).id);
+      const { run, arca, email } = setup();
+      arca.state.failures = 1;
+
+      await run();
+
+      // El segundo cliente recibe su email a las 14:00; el primero, recién tras su reintento.
+      expect(email.attemptTimes.map((t) => t.toISOString().slice(11, 16))).toEqual(['14:00', '14:05']);
+      expect(email.sent.map((e) => e.to)).toEqual([second.email, first.email]);
+    });
+
+    it('AC-51, AC-109: no envía email si no se generó la factura', async () => {
+      db.update(settings).set({ retryCount: 0 }).run();
+      addClient();
+      const failing = addClient();
+      assign(failing.id, addSystem('CRM', 100_00).id);
+      const { run, arca, email } = setup();
+      arca.state.failures = 1;
+
+      await run();
+
+      expect(email.sent).toEqual([]);
+    });
+
+    it('AC-144: no reenvía el email si el proceso se vuelve a ejecutar', async () => {
+      const client = addClient();
+      assign(client.id, addSystem('CRM', 100_00).id);
+      const { run, email } = setup();
+
+      await run();
+      await run();
+
+      expect(email.sent).toHaveLength(1);
+    });
+
+    it('AC-110: si el servidor rechaza todos los envíos, 4 intentos, la factura sigue Pendiente y hay error de proceso', async () => {
+      const client = addClient();
+      assign(client.id, addSystem('CRM', 100_00).id);
+      const { run, email } = setup();
+      email.state.failures = 99;
+
+      const summary = await run();
+      const invoice = summary.generated[0]!;
+
+      expect(email.attemptTimes.map((t) => t.toISOString().slice(11, 16))).toEqual(['14:00', '14:05', '14:10', '14:15']);
+      expect(db.select().from(invoices).get()).toMatchObject({ id: invoice.id, status: 'pending_payment' });
+      expect(summary.emailFailed).toEqual([{ invoiceId: invoice.id, attempts: 4, error: 'no se pudo enviar el email: 550 rechazado' }]);
+      expect(db.select().from(processErrors).all()).toEqual([
+        expect.objectContaining({
+          operation: 'invoice_email',
+          clientId: client.id,
+          invoiceId: invoice.id,
+          period: '2026-10',
+          attempts: 4,
+          status: 'pending',
+          lastError: 'no se pudo enviar el email: 550 rechazado',
+        }),
+      ]);
+      expect(db.select().from(clientHistory).all()).toEqual([]);
+    });
+
+    it('si el email falla y después sale bien, no queda error de proceso', async () => {
+      const client = addClient();
+      assign(client.id, addSystem('CRM', 100_00).id);
+      const { run, email } = setup();
+      email.state.failures = 2;
+
+      const summary = await run();
+
+      expect(summary.emailed).toHaveLength(1);
+      expect(db.select().from(processErrors).all()).toEqual([]);
     });
   });
 

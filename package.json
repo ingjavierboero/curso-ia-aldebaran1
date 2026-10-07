@@ -16,6 +16,7 @@
     "db:generate": "npm run db:generate -w server",
     "db:seed": "npm run db:seed -w server",
     "arca:check": "npm run arca:check -w server",
-    "billing:run": "npm run billing:run -w server"
+    "billing:run": "npm run billing:run -w server",
+    "email:check": "npm run email:check -w server"
   }
 }

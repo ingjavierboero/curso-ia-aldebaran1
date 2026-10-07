@@ -29,6 +29,8 @@ export interface Config {
     user: string;
     appPassword: string;
   };
+  /** Solo desarrollo: si está definida, todos los emails salientes van a esta casilla. */
+  emailRedirectTo: string | null;
   arca: {
     cuit: string;
     certPath: string;
@@ -75,6 +77,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, rootDir = ROOT_
     problems.push(`PORT inválido: "${rawPort}"`);
   }
 
+  const redirect = value('EMAIL_REDIRECT_TO');
+  if (redirect && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(redirect)) {
+    problems.push(`EMAIL_REDIRECT_TO no es un email válido: "${redirect}"`);
+  }
+
   if (problems.length > 0) throw new ConfigError(problems);
 
   return {
@@ -85,6 +92,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, rootDir = ROOT_
       user: value('GMAIL_USER'),
       appPassword: value('GMAIL_APP_PASSWORD'),
     },
+    emailRedirectTo: redirect || null,
     arca: {
       cuit,
       certPath: resolveFromRoot(value('ARCA_CERT_PATH'), rootDir),

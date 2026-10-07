@@ -3,9 +3,11 @@ import { createArcaClientFromConfig } from '../arca/index.js';
 import { loadConfig, loadEnvFile } from '../config.js';
 import { openDb } from '../db/index.js';
 import { clients, invoiceItems } from '../db/schema.js';
+import { createMailer } from '../email/mailer.js';
 import { runBilling } from './run.js';
 
-// Ejecuta a mano el proceso de facturación del período corriente contra ARCA homologación,
+// Ejecuta a mano el proceso de facturación del período corriente contra ARCA homologación
+// y envía los emails de las facturas generadas,
 // con la configuración de la base (punto de venta, reintentos). Mientras no haya scheduler,
 // es la forma de probarlo de punta a punta.
 loadEnvFile();
@@ -15,7 +17,13 @@ const db = openDb(config.databasePath);
 const pesos = (cents: number) =>
   (cents / 100).toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2 });
 
-const summary = await runBilling({ db, arca: createArcaClientFromConfig(db, config) });
+if (config.emailRedirectTo) console.log(`EMAIL_REDIRECT_TO activo: los emails van a ${config.emailRedirectTo}`);
+const summary = await runBilling({
+  db,
+  arca: createArcaClientFromConfig(db, config),
+  mailer: createMailer(config),
+  issuerCuit: config.arca.cuit,
+});
 const nameOf = (id: number) => db.select().from(clients).where(eq(clients.id, id)).get()?.businessName ?? `#${id}`;
 
 console.log(`Facturación del período ${summary.period}`);
@@ -29,8 +37,12 @@ for (const invoice of summary.generated) {
     console.log(`      ${item.description}: ${pesos(item.amountCents)}${original}`);
   }
 }
+for (const sent of summary.emailed) console.log(`  ✉ factura #${sent.invoiceId} enviada a ${sent.to}`);
+for (const failure of summary.emailFailed) {
+  console.log(`  ✘ email de la factura #${failure.invoiceId}: ${failure.error} (${failure.attempts} intentos)`);
+}
 for (const clientId of summary.alreadyInvoiced) console.log(`  = ${nameOf(clientId)}: ya tenía la factura del período`);
 for (const failure of summary.failed) {
   console.log(`  ✘ ${nameOf(failure.clientId)}: ${failure.error} (${failure.attempts} intentos)`);
 }
-if (summary.failed.length > 0) process.exitCode = 1;
+if (summary.failed.length > 0 || summary.emailFailed.length > 0) process.exitCode = 1;

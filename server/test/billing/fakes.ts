@@ -1,5 +1,6 @@
 import type { ArcaClient, CaeRequest, IssuedInvoice } from '../../src/arca/index.js';
 import { ArcaError } from '../../src/arca/index.js';
+import { EmailError, type Mailer, type OutgoingEmail } from '../../src/email/mailer.js';
 import type { Clock } from '../../src/retry.js';
 
 /** Reloj simulado: `sleep` avanza el tiempo al instante y queda registrado. */
@@ -88,4 +89,23 @@ export function issueForeignInvoice(arca: ReturnType<typeof fakeArcaClient>, poi
     cae: 'AJENO',
     caeExpiresAt: '2026-10-11',
   });
+}
+
+/** Mailer simulado: guarda los emails en vez de enviarlos. `failures` hace fallar los próximos N envíos. */
+export function fakeMailer(clock?: Clock) {
+  const sent: OutgoingEmail[] = [];
+  const attemptTimes: Date[] = [];
+  const state = { failures: 0, failWith: 'no se pudo enviar el email: 550 rechazado' };
+  const mailer: Mailer = {
+    async send(email) {
+      if (clock) attemptTimes.push(clock.now());
+      if (state.failures > 0) {
+        state.failures -= 1;
+        throw new EmailError(state.failWith);
+      }
+      sent.push(email);
+      return { to: email.to, messageId: `<msg-${sent.length}@test>` };
+    },
+  };
+  return { mailer, sent, attemptTimes, state };
 }

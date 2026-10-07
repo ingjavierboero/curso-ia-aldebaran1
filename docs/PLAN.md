@@ -14,8 +14,8 @@ Cada paso termina con sus tests en verde y un commit. No se avanza al siguiente 
 | 4 | Cotización | ✅ Hecho |
 | 5 | Cliente ARCA (homologación) | ✅ Hecho |
 | 6 | Proceso de facturación | ✅ Hecho |
-| 7 | Email de la factura | ⏳ Próximo |
-| 8 | Clasificador LLM | Pendiente |
+| 7 | Email de la factura | ✅ Hecho |
+| 8 | Clasificador LLM | ⏳ Próximo |
 | 9 | Lectura de la casilla | Pendiente |
 | 10 | Scheduler | Pendiente |
 | 11 | Cierre mínimo para el usuario | Pendiente |
@@ -36,7 +36,7 @@ Cada paso termina con sus tests en verde y un commit. No se avanza al siguiente 
 
 ## Fuera de esta etapa
 
-Login, usuarios y perfiles; ABMs con interfaz; dashboard y banners; recordatorios de fin de mes; reintento manual de errores; interfaz de configuración.
+Login, usuarios y perfiles; ABMs con interfaz; dashboard y banners; recordatorios de fin de mes; reintento manual de errores; interfaz de configuración, incluidos los datos de la empresa emisora (RF-124, RF-125).
 
 ## Decisiones tomadas
 
@@ -72,4 +72,11 @@ Login, usuarios y perfiles; ABMs con interfaz; dashboard y banners; recordatorio
   - Un cliente sin condición frente al IVA no se factura y genera un error de proceso (RF-120 y AC-161).
   - La migración 0002 se escribió a mano: la de drizzle-kit recreaba `clients` y, dentro de la transacción, borraba en cascada asignaciones e historial.
   - Un cliente cuya generación falla se reintenta a los N minutos sin demorar a los demás.
+- **Decisiones del paso 7, llevadas al PRD:**
+  - El email de cada factura se envía apenas se genera, con reintentos propios, sin demorar a los demás: RF-121 y AC-162.
+  - El email informa la deuda vigente total y pide responder con el comprobante adjunto: RF-122 y AC-163.
+  - El PDF y el email llevan la leyenda de homologación "sin validez fiscal", solo mientras se facture en homologación: RF-123 y AC-164.
+  - Datos de la empresa emisora configurables por un Admin y en el PDF: RF-124, RF-125 y AC-165. **Fuera de esta etapa:** hoy el PDF muestra solo el CUIT del emisor.
+  - Riesgo agregado: para producción el PDF debe cumplir los requisitos de ARCA (por ejemplo, el QR de RG 4892).
+  - Variable opcional `EMAIL_REDIRECT_TO` (solo desarrollo) para mandar todos los emails a una casilla de prueba.
 - **Usuarios:** la tabla de usuarios y los campos de "quién confirmó o revisó" no están en esta etapa porque el login está fuera de alcance. Llegan con su propia migración.
